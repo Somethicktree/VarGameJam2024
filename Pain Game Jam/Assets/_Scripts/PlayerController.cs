@@ -110,6 +110,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    //Use fixed Update if moving player and using Physics
     private void FixedUpdate()
     {
         MovePlayer();
