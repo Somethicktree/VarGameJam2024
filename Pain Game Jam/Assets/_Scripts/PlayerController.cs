@@ -19,7 +19,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] float knockBackForceZ;
     [SerializeField] float knockBackForceY;
     [SerializeField] Transform playerObj;
-    [SerializeField] Animator animatorReference;
+    //[SerializeField] Animator animatorReference;
 
     private float moveSpeed;
     private float coyoteTimeCounter;
@@ -42,12 +42,19 @@ public class PlayerController : MonoBehaviour
     private RaycastHit slopeHit;
     private bool exitingSlope;
 
+    [Header("Step Climb")]
+    [SerializeField] GameObject stepRayUpper;
+    [SerializeField] GameObject stepRayLower;
+    [SerializeField] float stepHeight = 0.3f;
+    [SerializeField] float stepSmooth = 0.1f; //Smooth transition
+
     //Landing
     private bool landed = true;
 
     private bool onMovingPlatform;
     private bool canApplyDownwardForce;
 
+    [Header("Orientation")]
     [SerializeField] Transform orientation;
 
     private float horizontalInput;
@@ -62,6 +69,14 @@ public class PlayerController : MonoBehaviour
         walking,
         sprinting,
         air
+    }
+
+    private void Awake()
+    {
+        
+        //Take stepRayUpper position and set its height to be the step height we set in the inspector
+        //allows us to adjust how hight steps can be
+        stepRayUpper.transform.position = new Vector3(stepRayUpper.transform.position.x, stepHeight, stepRayUpper.transform.position.z);
     }
 
     // Start is called before the first frame update
@@ -114,6 +129,7 @@ public class PlayerController : MonoBehaviour
     private void FixedUpdate()
     {
         MovePlayer();
+        StepClimb();
     }
 
     void movementStateHandler()
@@ -212,8 +228,8 @@ public class PlayerController : MonoBehaviour
             if (!onMovingPlatform)
                 rb.useGravity = !OnSlope();
 
-            float horizontalSpeed = new Vector3(rb.velocity.x, 0, rb.velocity.z).magnitude;
-            float verticalSpeed = new Vector3(0, rb.velocity.y, 0).magnitude;
+            float horizontalspeed = new Vector3(rb.velocity.x, 0, rb.velocity.z).magnitude;
+            float verticalspeed = new Vector3(0, rb.velocity.y, 0).magnitude;
 
             float gravityfactor;
 
@@ -226,10 +242,59 @@ public class PlayerController : MonoBehaviour
                 gravityfactor = -1;
             }
 
-            animatorReference?.SetFloat("HorizontalSpeed", horizontalSpeed);
-            animatorReference?.SetFloat("VerticalSpeed", verticalSpeed * gravityfactor);
+            //Gets input for animator from the horizontal speed 
+            //animatorReference?.SetFloat("HorizontalSpeed", horizontalSpeed);
+            //animatorReference?.SetFloat("VerticalSpeed", verticalSpeed * gravityfactor);
 
         }
+    }
+
+    void StepClimb()
+    {
+        //Check if lower Step Ray hit something first if so then check the upper raycast
+        RaycastHit hitLower;
+
+        if(Physics.Raycast(stepRayLower.transform.position, transform.TransformDirection(Vector3.forward), out hitLower, 0.1f))
+        {
+            Debug.Log("Hitting Lower");
+            //put second raycast inside if statement to limit raycast checks
+            //Check if this Raycast isnt hitting anything
+            RaycastHit hitUpper;
+
+            if (!Physics.Raycast(stepRayUpper.transform.position, transform.TransformDirection(Vector3.forward), out hitUpper, 0.2f))
+            {
+                Debug.Log("Hitting Upper");
+                //Take the rb position and minus by the stepSmooth amount
+                rb.position -= new Vector3(0f, -stepSmooth * Time.deltaTime, 0f);
+                Debug.Log("Moving Up");
+            }
+        }
+
+        RaycastHit hitLower45;
+
+        if(Physics.Raycast(stepRayLower.transform.position, transform.TransformDirection(1.5f, 0, 1), out hitLower45, 0.1f))
+        {
+            RaycastHit hitUpper45;
+            if(!Physics.Raycast(stepRayUpper.transform.position, transform.TransformDirection(1.5f, 0, 1), out hitUpper45, 0.2f))
+            {
+                rb.position -= new Vector3(0f, -stepSmooth * Time.deltaTime, 0f);
+            }
+
+        }
+
+        RaycastHit hitLowerMinus45;
+
+        if (Physics.Raycast(stepRayLower.transform.position, transform.TransformDirection(-1.5f, 0, 1), out hitLowerMinus45, 0.1f))
+        {
+            RaycastHit hitUpperMinus45;
+            if (!Physics.Raycast(stepRayUpper.transform.position, transform.TransformDirection(-1.5f, 0, 1), out hitUpperMinus45, 0.2f))
+            {
+                rb.position -= new Vector3(0f, -stepSmooth * Time.deltaTime, 0f);
+            }
+
+        }
+
+
     }
 
     void SpeedControl()
